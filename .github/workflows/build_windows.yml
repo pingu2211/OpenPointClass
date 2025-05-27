@@ -1,0 +1,38 @@
+name: Windows CMake Build with vcpkg
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install vcpkg
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git %VCPKG_ROOT%
+        %VCPKG_ROOT%\bootstrap-vcpkg.bat
+
+    - name: Install dependencies with vcpkg
+      run: |
+        %VCPKG_ROOT%\vcpkg install eigen3:x64-windows tbb:x64-windows pdal:x64-windows
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DWITH_GBT=ON -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+
+    - name: Build with MSBuild
+      run: |
+        cd build
+        cmake --build . --config Release --target ALL_BUILD -- /maxcpucount:14
