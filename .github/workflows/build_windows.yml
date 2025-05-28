@@ -40,3 +40,9 @@ jobs:
       run: |
         cd build
         cmake --build . --config Release --target ALL_BUILD -- /maxcpucount:14
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-build
+        path: build/Release
