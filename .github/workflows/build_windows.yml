@@ -11,28 +11,32 @@ jobs:
     runs-on: windows-latest
 
     env:
-      VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg  # Use forward slashes for proper path resolution
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Install vcpkg
+      shell: cmd
       run: |
-        git clone https://github.com/microsoft/vcpkg.git %VCPKG_ROOT%
-        %VCPKG_ROOT%\bootstrap-vcpkg.bat
+        git clone https://github.com/microsoft/vcpkg.git "%VCPKG_ROOT%"
+        call "%VCPKG_ROOT%\bootstrap-vcpkg.bat"
 
     - name: Install dependencies with vcpkg
+      shell: cmd
       run: |
-        %VCPKG_ROOT%\vcpkg install eigen3:x64-windows tbb:x64-windows pdal:x64-windows
+        call "%VCPKG_ROOT%\vcpkg" install eigen3:x64-windows tbb:x64-windows pdal:x64-windows
 
     - name: Configure CMake
+      shell: cmd
       run: |
         mkdir build
         cd build
-        cmake .. -DWITH_GBT=ON -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake
+        cmake .. -DWITH_GBT=ON -DCMAKE_TOOLCHAIN_FILE="%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake"
 
     - name: Build with MSBuild
+      shell: cmd
       run: |
         cd build
         cmake --build . --config Release --target ALL_BUILD -- /maxcpucount:14
