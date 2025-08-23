@@ -344,7 +344,7 @@ PointSet *pdalReadPointSet(const std::string &filename) {
     s->prepare(*table);
     const pdal::PointViewSet pvSet = s->execute(*table);
 
-    pdal::MetadataNode lasforward, m;
+    pdal::MetadataNode lasforward;
     lasforward = table->privateMetadata("lasforward");
     if (lasforward.valid()) {
         readLasMeta(lasforward, "scale_x", r->scales[0]);
