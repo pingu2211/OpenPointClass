@@ -314,13 +314,39 @@ PointSet *fastPlyReadPointSet(const std::string &filename) {
     return r;
 }
 
+#ifdef WITH_PDAL
 template <typename T>
-void readLasMeta(pdal::MetadataNode &lasforward, std::string name, T &val) {
+bool pdalReadLasMeta(pdal::MetadataNode &lasforward, std::string name, T &val) {
     pdal::MetadataNode m = lasforward.findChild(name);
     if (m.valid()) {
         val = m.value<T>();
+        return true;
+    } else {
+        return false;
     }
 }
+
+void pdalReadLasScaleOffset(pdal::PointTable *table, PointSet *pSet) {
+    pdal::MetadataNode lasforward;
+    lasforward = table->privateMetadata("lasforward");
+    if (!lasforward.valid())
+        return;
+    bool success = true;
+    pSet->scales = std::make_unique<std::array<double, 3>>();
+    success &= pdalReadLasMeta(lasforward, "scale_x", pSet->scales->at(0));
+    success &= pdalReadLasMeta(lasforward, "scale_y", pSet->scales->at(1));
+    success &= pdalReadLasMeta(lasforward, "scale_z", pSet->scales->at(2));
+    if (!success)
+        pSet->scales = nullptr;
+    success = true;
+    pSet->offsets = std::make_unique<std::array<double, 3>>();
+    success &= pdalReadLasMeta(lasforward, "offset_x", pSet->offsets->at(0));
+    success &= pdalReadLasMeta(lasforward, "offset_y", pSet->offsets->at(1));
+    success &= pdalReadLasMeta(lasforward, "offset_z", pSet->offsets->at(2));
+    if (!success)
+        pSet->offsets = nullptr;
+}
+#endif
 
 PointSet *pdalReadPointSet(const std::string &filename) {
     #ifdef WITH_PDAL
@@ -344,17 +370,9 @@ PointSet *pdalReadPointSet(const std::string &filename) {
     s->prepare(*table);
     const pdal::PointViewSet pvSet = s->execute(*table);
 
-    pdal::MetadataNode lasforward;
-    lasforward = table->privateMetadata("lasforward");
-    if (lasforward.valid()) {
-        readLasMeta(lasforward, "scale_x", r->scales[0]);
-        readLasMeta(lasforward, "scale_y", r->scales[1]);
-        readLasMeta(lasforward, "scale_z", r->scales[2]);
-        readLasMeta(lasforward, "offset_x", r->offsets[0]);
-        readLasMeta(lasforward, "offset_y", r->offsets[1]);
-        readLasMeta(lasforward, "offset_z", r->offsets[2]);
+    if (driver == "readers.las") {
+        pdalReadLasScaleOffset(table, r);
     }
-
 
     r->pointView = *pvSet.begin();
     const pdal::PointViewPtr pView = r->pointView;
@@ -513,12 +531,16 @@ void pdalSavePointSet(PointSet &pSet, const std::string &filename) {
     pdal::Options opts;
     opts.add("filename", filename);
     if (driver == "writers.las") {
-        opts.add("scale_x", pSet.scales[0]);
-        opts.add("scale_y", pSet.scales[1]);
-        opts.add("scale_z", pSet.scales[2]);
-        opts.add("offset_x", pSet.offsets[0]);
-        opts.add("offset_y", pSet.offsets[1]);
-        opts.add("offset_z", pSet.offsets[2]);
+        if (pSet.scales != nullptr) {
+            opts.add("scale_x", pSet.scales->at(0));
+            opts.add("scale_y", pSet.scales->at(1));
+            opts.add("scale_z", pSet.scales->at(2));
+        }
+        if (pSet.offsets != nullptr) {
+            opts.add("offset_x", pSet.offsets->at(0));
+            opts.add("offset_y", pSet.offsets->at(1));
+            opts.add("offset_z", pSet.offsets->at(2));
+        }
     }
     s->setOptions(opts);
     s->setInput(reader);
