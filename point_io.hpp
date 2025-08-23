@@ -33,6 +33,9 @@ struct PointSet {
     std::vector<uint8_t> labels;
     std::vector<uint8_t> views;
 
+    std::array<double, 3> scales {0.01, 0.01, 0.01};
+    std::array<double, 3> offsets {0.0, 0.0, 0.0};
+
     std::vector<size_t> pointMap;
     PointSet *base = nullptr;
 

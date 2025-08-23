@@ -314,6 +314,14 @@ PointSet *fastPlyReadPointSet(const std::string &filename) {
     return r;
 }
 
+template <typename T>
+void readLasMeta(pdal::MetadataNode &lasforward, std::string name, T &val) {
+    pdal::MetadataNode m = lasforward.findChild(name);
+    if (m.valid()) {
+        val = m.value<T>();
+    }
+}
+
 PointSet *pdalReadPointSet(const std::string &filename) {
     #ifdef WITH_PDAL
     std::string labelDimension;
@@ -335,6 +343,18 @@ PointSet *pdalReadPointSet(const std::string &filename) {
 
     s->prepare(*table);
     const pdal::PointViewSet pvSet = s->execute(*table);
+
+    pdal::MetadataNode lasforward, m;
+    lasforward = table->privateMetadata("lasforward");
+    if (lasforward.valid()) {
+        readLasMeta(lasforward, "scale_x", r->scales[0]);
+        readLasMeta(lasforward, "scale_y", r->scales[1]);
+        readLasMeta(lasforward, "scale_z", r->scales[2]);
+        readLasMeta(lasforward, "offset_x", r->offsets[0]);
+        readLasMeta(lasforward, "offset_y", r->offsets[1]);
+        readLasMeta(lasforward, "offset_z", r->offsets[2]);
+    }
+
 
     r->pointView = *pvSet.begin();
     const pdal::PointViewPtr pView = r->pointView;
@@ -492,6 +512,14 @@ void pdalSavePointSet(PointSet &pSet, const std::string &filename) {
     pdal::Stage *s = factory.createStage(driver);
     pdal::Options opts;
     opts.add("filename", filename);
+    if (driver == "writers.las") {
+        opts.add("scale_x", pSet.scales[0]);
+        opts.add("scale_y", pSet.scales[1]);
+        opts.add("scale_z", pSet.scales[2]);
+        opts.add("offset_x", pSet.offsets[0]);
+        opts.add("offset_y", pSet.offsets[1]);
+        opts.add("offset_z", pSet.offsets[2]);
+    }
     s->setOptions(opts);
     s->setInput(reader);
 
