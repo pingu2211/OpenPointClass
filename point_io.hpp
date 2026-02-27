@@ -40,6 +40,8 @@ struct PointSet {
 
     #ifdef WITH_PDAL
     pdal::PointViewPtr pointView = nullptr;
+    std::unique_ptr<std::array<double, 3>> scales = nullptr;
+    std::unique_ptr<std::array<double, 3>> offsets = nullptr;
     #endif
 
     template <typename T>
